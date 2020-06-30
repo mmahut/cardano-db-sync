@@ -25,6 +25,7 @@ module Cardano.DbSync.Types
   , ShelleyTxIn
   , ShelleyTxOut
   , ShelleyTxSeq
+  , ShelleyUpdate
   , SocketPath (..)
   ) where
 
@@ -42,8 +43,10 @@ import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.BlockChain as Shelley
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
+import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
+
 
 data CardanoBlockTip
   = ByronBlockTip !ByronBlock !(Tip ByronBlock)
@@ -93,6 +96,7 @@ type ShelleyTxId = Shelley.TxId Shelley.TPraosStandardCrypto
 type ShelleyTxIn = Shelley.TxIn Shelley.TPraosStandardCrypto
 type ShelleyTxOut = Shelley.TxOut Shelley.TPraosStandardCrypto
 type ShelleyTxSeq = Shelley.TxSeq Shelley.TPraosStandardCrypto
+type ShelleyUpdate = Shelley.Update Shelley.TPraosStandardCrypto
 
 newtype SocketPath = SocketPath
   { unSocketPath :: FilePath

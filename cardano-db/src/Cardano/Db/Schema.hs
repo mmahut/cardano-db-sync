@@ -241,23 +241,22 @@ share
 
   ParamUpdate
     epochNo             Word64
-    minFee              Word64
-    maxFee              Word64
-    maxBlockSize        Word64
-    maxTxSize           Word64
-    maxBhSize           Word64
-    keyDeposit          Word64              sqltype=lovelace
-    poolDeposit         Word64              sqltype=lovelace
-    maxEpoch            Word64
-    nOptimal            Word64
-    influence           Double              -- sqltype=rational
-    monetaryExpandRate  Word64              sqltype=interval
-    treasuryGrowthRate  Word64              sqltype=interval
-    activeSlotCoeff     Word64              sqltype=interval
-    decentralisation    Word64              sqltype=interval
-    entropy             ByteString          sqltype=hash32type
-    protocolVersion     ByteString          -- sqltype=protocol_version????
-    minCoin             Word64              sqltype=lovelace
+    minFee              Word64 Maybe
+    maxFee              Word64 Maybe
+    maxBlockSize        Word64 Maybe
+    maxTxSize           Word64 Maybe
+    maxBhSize           Word64 Maybe
+    keyDeposit          Word64 Maybe        sqltype=lovelace
+    poolDeposit         Word64 Maybe        sqltype=lovelace
+    maxEpoch            Word64 Maybe
+    nOptimal            Word64 Maybe
+    influence           Double Maybe        -- sqltype=rational
+    monetaryExpandRate  Word64 Maybe        sqltype=interval
+    treasuryGrowthRate  Word64 Maybe        sqltype=interval
+    activeSlotCoeff     Word64 Maybe        sqltype=interval
+    decentralisation    Word64 Maybe        sqltype=interval
+    entropy             ByteString Maybe    sqltype=hash32type
+    protocolVersion     ByteString Maybe    -- sqltype=protocol_version????
     UniqueParamUpdate   epochNo
 
   |]

@@ -6,6 +6,7 @@ module Cardano.Db.Insert
   , insertDelegation
   , insertEpoch
   , insertMeta
+  , insertParamUpdate
   , insertPool
   , insertPoolMetaData
   , insertPoolOwner
@@ -50,6 +51,9 @@ insertEpoch = insertByReturnKey "Epoch"
 
 insertMeta :: (MonadBaseControl IO m, MonadIO m) => Meta -> ReaderT SqlBackend m MetaId
 insertMeta = insertByReturnKey "Meta"
+
+insertParamUpdate :: (MonadBaseControl IO m, MonadIO m) => ParamUpdate -> ReaderT SqlBackend m ParamUpdateId
+insertParamUpdate = insertByReturnKey "ParamUpdate"
 
 insertPool :: (MonadBaseControl IO m, MonadIO m) => Pool -> ReaderT SqlBackend m PoolId
 insertPool = insertByReturnKey "Pool"

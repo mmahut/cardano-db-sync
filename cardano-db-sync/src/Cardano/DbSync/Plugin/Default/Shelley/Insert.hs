@@ -44,6 +44,7 @@ import qualified Shelley.Spec.Ledger.Address as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley
+-- import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
@@ -124,7 +125,7 @@ insertTx tracer env blkId blockIndex tx = do
     mapM_ (insertDelegCert tracer env txId) (Shelley.txDelegationCerts $ Shelley._body tx)
     mapM_ (insertMirCert tracer env txId) (Shelley.txMirCertificates $ Shelley._body tx)
     mapM_ (insertWithdrawals tracer txId) (Map.toList . Shelley.unWdrl . Shelley._wdrls $ Shelley._body tx)
-
+    -- maybe (pure ()) (insertParamUpdate tracer) (Shelley.strictMaybeToMaybe . Shelley._txUpdate $ Shelley._body tx)
 
 insertTxOut
     :: (MonadBaseControl IO m, MonadIO m)
@@ -379,3 +380,48 @@ insertPoolRelay poolId relay =
           , DB.poolRelayDnsSrvName = Just (Shelley.dnsToText name)
           , DB.poolRelayPort = Nothing
           }
+
+{-
+insertParamUpdate
+    :: (MonadBaseControl IO m, MonadIO m)
+    => Trace IO Text -> ShelleyUpdate
+    -> ExceptT DbSyncNodeError (ReaderT SqlBackend m) ()
+insertParamUpdate tracer (Update (ProposedPPUpdates um) epochNo) =
+  void . lift . DB.insertParamUpdate $
+    DB.ParamUpdate
+      { DB.paramUpdateEpochNo = unEpochNo epochNo
+      , DB.paramUpdateMinFee =
+      , DB.paramUpdateMaxFee =
+      , DB.paramUpdateMaxBlockSize =
+      , DB.paramUpdateMaxTxSize =
+      , DB.paramUpdateMaxBhSize =
+      , DB.paramUpdateKeyDeposit =
+      , DB.paramUpdatePoolDeposit =
+      , DB.paramUpdateMaxEpoch =
+      , DB.paramUpdateNOptimal =
+      , DB.paramUpdateInfluence =
+      , DB.paramUpdateMonetaryExpandRate =
+      , DB.paramUpdateTreasuryGrowthRate =
+      , DB.paramUpdateActiveSlotCoeff =
+      , DB.paramUpdateDecentralisation =
+      , DB.paramUpdateEntropy =
+      , DB.paramUpdateProtocolVersion =
+      }
+      [ "minFeeA" .= _minfeeA pp,
+        "minFeeB" .= _minfeeB pp,
+        "maxBlockBodySize" .= _maxBBSize pp,
+        "maxTxSize" .= _maxTxSize pp,
+        "maxBlockHeaderSize" .= _maxBHSize pp,
+        "keyDeposit" .= _keyDeposit pp,
+        "poolDeposit" .= _poolDeposit pp,
+        "eMax" .= _eMax pp,
+        "nOpt" .= _nOpt pp,
+        "a0" .= (fromRational (_a0 pp) :: Scientific),
+        "rho" .= _rho pp,
+        "tau" .= _tau pp,
+        "decentralisationParam" .= _d pp,
+        "extraEntropy" .= _extraEntropy pp,
+        "protocolVersion" .= _protocolVersion pp,
+        "minUTxOValue" .= _minUTxOValue pp,
+        "minPoolCost" .= _minPoolCost pp
+-}
