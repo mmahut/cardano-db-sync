@@ -57,7 +57,7 @@ BEGIN
     EXECUTE 'ALTER TABLE "stake" ADD CONSTRAINT "unique_stake" UNIQUE("addr_id","stake")' ;
     EXECUTE 'ALTER TABLE "stake" ADD CONSTRAINT "stake_addr_id_fkey" FOREIGN KEY("addr_id") REFERENCES "stake_address"("id")' ;
     EXECUTE 'ALTER TABLE "stake" ADD CONSTRAINT "stake_tx_id_fkey" FOREIGN KEY("tx_id") REFERENCES "tx"("id")' ;
-    EXECUTE 'CREATe TABLE "param_update"("id" SERIAL8  PRIMARY KEY UNIQUE,"epoch_no" INT8 NOT NULL,"min_fee" INT8 NOT NULL,"max_fee" INT8 NOT NULL,"max_block_size" INT8 NOT NULL,"max_tx_size" INT8 NOT NULL,"max_bh_size" INT8 NOT NULL,"key_deposit" lovelace NOT NULL,"pool_deposit" lovelace NOT NULL,"max_epoch" INT8 NOT NULL,"n_optimal" INT8 NOT NULL,"influence" DOUBLE PRECISION NOT NULL,"monetary_expand_rate" interval NOT NULL,"treasury_growth_rate" interval NOT NULL,"active_slot_coeff" interval NOT NULL,"decentralisation" interval NOT NULL,"entropy" hash32type NOT NULL,"protocol_version" BYTEA NOT NULL,"min_coin" lovelace NOT NULL)' ;
+    EXECUTE 'CREATe TABLE "param_update"("id" SERIAL8  PRIMARY KEY UNIQUE,"epoch_no" INT8 NOT NULL,"min_fee" INT8 NULL,"max_fee" INT8 NULL,"max_block_size" INT8 NULL,"max_tx_size" INT8 NULL,"max_bh_size" INT8 NULL,"key_deposit" lovelace NULL,"pool_deposit" lovelace NULL,"max_epoch" INT8 NULL,"n_optimal" INT8 NULL,"influence" DOUBLE PRECISION NULL,"monetary_expand_rate" interval NULL,"treasury_growth_rate" interval NULL,"active_slot_coeff" interval NULL,"decentralisation" interval NULL,"entropy" hash32type NULL,"protocol_version" BYTEA NULL)' ;
     EXECUTE 'ALTER TABLE "param_update" ADD CONSTRAINT "unique_param_update" UNIQUE("epoch_no")' ;
     -- Hand written SQL statements can be added here.
     UPDATE schema_version SET stage_two = 3 ;
