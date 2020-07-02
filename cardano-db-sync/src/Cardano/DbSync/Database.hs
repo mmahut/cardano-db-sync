@@ -63,7 +63,9 @@ runDbThread trce env plugin metrics queue = do
       mBlkNo <-  DB.runDbAction (Just trce) DB.queryLatestBlockNo
       case mBlkNo of
         Nothing -> pure ()
-        Just blkNo -> Gauge.set (fromIntegral blkNo) $ mDbHeight metrics
+        Just blkNo -> do
+          logInfo trce $ "runDbThread: mDbHeight = " <> textShow blkNo
+          Gauge.set (fromIntegral blkNo) $ mDbHeight metrics
       case eNextState of
         Left err -> logError trce $ renderDbSyncNodeError err
         Right Continue -> loop
