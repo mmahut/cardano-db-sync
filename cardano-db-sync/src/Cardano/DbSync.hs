@@ -45,7 +45,7 @@ import           Cardano.DbSync.Metrics
 import           Cardano.DbSync.Plugin (DbSyncNodePlugin (..))
 import           Cardano.DbSync.Plugin.Default (defDbSyncNodePlugin)
 import           Cardano.DbSync.Plugin.Default.Rollback (unsafeRollback)
-import           Cardano.DbSync.StateQuery (StateQueryTVar (..), localStateQueryHandler)
+import           Cardano.DbSync.StateQuery (StateQueryTMVar (..), localStateQueryHandler)
 import           Cardano.DbSync.Tracing.ToObjectOrphans ()
 import           Cardano.DbSync.Types
 import           Cardano.DbSync.Util
@@ -209,16 +209,16 @@ dbSyncProtocols
   => Trace IO Text
   -> DbSyncEnv
   -> DbSyncNodePlugin
-  -> StateQueryTVar
+  -> StateQueryTMVar
   -> Network.NodeToClientVersion
   -> ClientCodecs blk IO
   -> ConnectionId LocalAddress
   -> NodeToClientProtocols 'InitiatorMode BSL.ByteString IO () Void
-dbSyncProtocols trce env plugin queryTVar _version codecs _connectionId =
+dbSyncProtocols trce env plugin queryVar _version codecs _connectionId =
     NodeToClientProtocols {
           localChainSyncProtocol = localChainSyncProtocol
         , localTxSubmissionProtocol = dummylocalTxSubmit
-        , localStateQueryProtocol = localStateQuery queryTVar
+        , localStateQueryProtocol = localStateQuery queryVar
         }
   where
     localChainSyncTracer :: Tracer IO (TraceSendRecv (ChainSync blk (Tip blk)))
@@ -255,12 +255,12 @@ dbSyncProtocols trce env plugin queryTVar _version codecs _connectionId =
         (cTxSubmissionCodec codecs)
         localTxSubmissionPeerNull
 
-    localStateQuery :: StateQueryTVar -> RunMiniProtocol 'InitiatorMode BSL.ByteString IO () Void
-    localStateQuery queryTVar =
+    localStateQuery :: StateQueryTMVar -> RunMiniProtocol 'InitiatorMode BSL.ByteString IO () Void
+    localStateQuery queryVar =
       InitiatorProtocolOnly $ MuxPeer
-        (contramap (Text.pack . show) . toLogObject $ appendName "db-sync-local-state-query" trce)
+        (contramap (Text.pack . show) . toLogObject $ appendName "local-state-query" trce)
         (cStateQueryCodec codecs)
-        (localStateQueryHandler trce queryTVar)
+        (localStateQueryHandler trce queryVar)
 
 
 logDbState :: Trace IO Text -> IO ()
