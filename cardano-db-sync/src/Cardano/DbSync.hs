@@ -60,6 +60,7 @@ import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Except.Exit (orDie)
 
 import qualified Data.ByteString.Lazy as BSL
+import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Void (Void)
@@ -207,15 +208,16 @@ dbSyncProtocols
   => Trace IO Text
   -> DbSyncEnv
   -> DbSyncNodePlugin
+  -> StateQueryTVar
   -> Network.NodeToClientVersion
   -> ClientCodecs blk IO
   -> ConnectionId LocalAddress
   -> NodeToClientProtocols 'InitiatorMode BSL.ByteString IO () Void
-dbSyncProtocols trce env plugin _version codecs _connectionId =
+dbSyncProtocols trce env plugin queryTVar _version codecs _connectionId =
     NodeToClientProtocols {
           localChainSyncProtocol = localChainSyncProtocol
         , localTxSubmissionProtocol = dummylocalTxSubmit
-        , localStateQueryProtocol = localStateQuery
+        , localStateQueryProtocol = localStateQuery queryTVar
         }
   where
     localChainSyncTracer :: Tracer IO (TraceSendRecv (ChainSync blk (Tip blk)))
@@ -252,10 +254,10 @@ dbSyncProtocols trce env plugin _version codecs _connectionId =
         (cTxSubmissionCodec codecs)
         localTxSubmissionPeerNull
 
-    localStateQuery :: RunMiniProtocol 'InitiatorMode BSL.ByteString IO () Void
-    localStateQuery =
+    localStateQuery :: StateQueryTVar -> RunMiniProtocol 'InitiatorMode BSL.ByteString IO () Void
+    localStateQuery queryTVar =
       InitiatorProtocolOnly $ MuxPeer
-        Logging.nullTracer
+        (contramap (Text.pack . show) . toLogObject $ appendName "db-sync-local-state-query" trce)
         (cStateQueryCodec codecs)
         (localStateQueryHandler trce queryTVar)
 
