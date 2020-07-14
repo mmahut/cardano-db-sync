@@ -45,6 +45,7 @@ import           Cardano.DbSync.Metrics
 import           Cardano.DbSync.Plugin (DbSyncNodePlugin (..))
 import           Cardano.DbSync.Plugin.Default (defDbSyncNodePlugin)
 import           Cardano.DbSync.Plugin.Default.Rollback (unsafeRollback)
+import           Cardano.DbSync.StateQuery (StateQueryTVar (..), localStateQueryHandler)
 import           Cardano.DbSync.Tracing.ToObjectOrphans ()
 import           Cardano.DbSync.Types
 import           Cardano.DbSync.Util
@@ -261,9 +262,6 @@ dbSyncProtocols trce env plugin queryTVar _version codecs _connectionId =
         (cStateQueryCodec codecs)
         (localStateQueryHandler trce queryTVar)
 
-
-localStateQueryHandler :: Peer (LocalStateQuery blk (Query blk)) pr st IO ()
-localStateQueryHandler queryTVar = panic "localStateQueryHandler"
 
 logDbState :: Trace IO Text -> IO ()
 logDbState trce = do
