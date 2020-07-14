@@ -257,10 +257,11 @@ dbSyncProtocols trce env plugin _version codecs _connectionId =
       InitiatorProtocolOnly $ MuxPeer
         Logging.nullTracer
         (cStateQueryCodec codecs)
-        localStateQueryHandler
+        (localStateQueryHandler trce queryTVar)
+
 
 localStateQueryHandler :: Peer (LocalStateQuery blk (Query blk)) pr st IO ()
-localStateQueryHandler = panic "localStateQueryHandler"
+localStateQueryHandler queryTVar = panic "localStateQueryHandler"
 
 logDbState :: Trace IO Text -> IO ()
 logDbState trce = do
