@@ -92,8 +92,8 @@ import           Ouroboros.Network.Mux (MuxPeer (..),  RunMiniProtocol (..))
 import           Ouroboros.Network.NodeToClient (IOManager, ClientSubscriptionParams (..),
                     ConnectionId, ErrorPolicyTrace (..), Handshake, LocalAddress,
                     NetworkSubscriptionTracers (..), NodeToClientProtocols (..),
-                    TraceSendRecv, WithAddr (..), localSnocket, localTxSubmissionPeerNull,
-                    networkErrorPolicies, withIOManager)
+                    TraceSendRecv, WithAddr (..), localSnocket, localStateQueryPeerNull,
+                    localTxSubmissionPeerNull, networkErrorPolicies, withIOManager)
 import qualified Ouroboros.Network.Point as Point
 import           Ouroboros.Network.Point (withOrigin)
 
@@ -150,7 +150,8 @@ runDbSyncNode plugin enp =
           GenesisShelley sCfg ->
             runDbSyncNodeNodeClient (ShelleyEnv $ Shelley.sgNetworkId sCfg)
                 iomgr trce plugin shelleyCodecConfig networkMagic (enpSocketPath enp)
-          GenesisCardano bCfg sCfg ->
+          GenesisCardano bCfg sCfg -> do
+            liftIO $ logInfo trce "Running GenesisCardano"
             runDbSyncNodeNodeClient (ShelleyEnv $ Shelley.sgNetworkId sCfg)
                 iomgr trce plugin (CardanoCodecConfig (mkByronCodecConfig bCfg) shelleyCodecConfig)
                 networkMagic (enpSocketPath enp)
@@ -259,7 +260,7 @@ dbSyncProtocols trce env plugin queryVar _version codecs _connectionId =
       InitiatorProtocolOnly $ MuxPeer
         (contramap (Text.pack . show) . toLogObject $ appendName "local-state-query" trce)
         (cStateQueryCodec codecs)
-        (localStateQueryHandler trce queryVar)
+        (if True then localStateQueryPeerNull else localStateQueryHandler trce queryVar)
 
 
 logDbState :: Trace IO Text -> IO ()
