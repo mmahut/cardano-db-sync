@@ -20,6 +20,7 @@ import           Cardano.DbSync.Util
 
 import           Cardano.Slotting.Slot (SlotNo (..))
 
+import qualified Data.ByteString.Short as BSShort
 import           Database.Persist.Sql (SqlBackend)
 
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
@@ -36,7 +37,7 @@ rollbackToPoint trce cpnt =
     CardanoPoint (Point pnt) ->
       case pnt of
         Origin -> pure $ Right ()
-        At (Block slot hash) -> DB.runDbNoLogging $ runExceptT (action slot $ getOneEraHash hash)
+        At (Block slot hash) -> DB.runDbNoLogging $ runExceptT (action slot $ BSShort.fromShort (getOneEraHash hash))
   where
     action :: MonadIO m => SlotNo -> ByteString -> ExceptT DbSyncNodeError (ReaderT SqlBackend m) ()
     action slot hash = do
