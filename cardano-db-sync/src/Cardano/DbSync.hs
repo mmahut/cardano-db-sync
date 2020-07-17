@@ -31,6 +31,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName, logInfo)
 import qualified Cardano.BM.Trace as Logging
 
+import qualified Cardano.Chain.Genesis as Byron
 import           Cardano.Client.Subscription (subscribe)
 import qualified Cardano.Crypto as Crypto
 
@@ -44,7 +45,8 @@ import           Cardano.DbSync.Metrics
 import           Cardano.DbSync.Plugin (DbSyncNodePlugin (..))
 import           Cardano.DbSync.Plugin.Default (defDbSyncNodePlugin)
 import           Cardano.DbSync.Plugin.Default.Rollback (unsafeRollback)
-import           Cardano.DbSync.StateQuery (StateQueryTMVar (..), localStateQueryHandler, newStateQueryTMVar)
+import           Cardano.DbSync.StateQuery (StateQueryTMVar (..), demoSlotToTimeEpoch,
+                    localStateQueryHandler, newStateQueryTMVar)
 import           Cardano.DbSync.Tracing.ToObjectOrphans ()
 import           Cardano.DbSync.Types
 import           Cardano.DbSync.Util
@@ -54,10 +56,12 @@ import           Cardano.Prelude hiding (atomically, option, (%), Nat)
 import           Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
 
 import qualified Codec.CBOR.Term as CBOR
+
 import           Control.Monad.Class.MonadSTM.Strict (atomically)
 import           Control.Monad.Class.MonadTimer (MonadTimer)
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Except.Exit (orDie)
+import           Control.Monad.Trans.Except.Extra (hoistEither)
 
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Functor.Contravariant (contramap)
@@ -74,7 +78,7 @@ import           Network.TypedProtocol.Pipelined (Nat(Zero, Succ))
 import           Ouroboros.Consensus.Block.Abstract (CodecConfig, ConvertRawHash (..))
 import           Ouroboros.Consensus.Byron.Ledger.Config (mkByronCodecConfig)
 import           Ouroboros.Consensus.Byron.Node ()
-import           Ouroboros.Consensus.Cardano.Block (CodecConfig (..))
+import           Ouroboros.Consensus.Cardano.Block (CardanoBlock, CodecConfig (..))
 import           Ouroboros.Consensus.Cardano.Node ()
 import           Ouroboros.Consensus.Network.NodeToClient (ClientCodecs,
                     cChainSyncCodec, cStateQueryCodec, cTxSubmissionCodec)
@@ -84,7 +88,6 @@ import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Config (CodecConfig (ShelleyCodecConfig))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
-import           Ouroboros.Network.Magic (NetworkMagic)
 import qualified Ouroboros.Network.NodeToClient.Version as Network
 import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Point (..),
                     Tip, genesisPoint, getTipBlockNo, blockNo)
@@ -110,8 +113,6 @@ import           Ouroboros.Network.Subscription (SubscriptionTrace)
 import           Prelude (String)
 import qualified Prelude
 
-import qualified Shelley.Spec.Ledger.Genesis as Shelley
-
 import qualified System.Metrics.Prometheus.Metric.Gauge as Gauge
 
 
@@ -131,8 +132,11 @@ runDbSyncNode plugin enp =
       Just slotNo -> void $ unsafeRollback trce slotNo
       Nothing -> pure ()
 
+
+
     orDie renderDbSyncNodeError $ do
       genCfg <- readGenesisConfig enc
+      genesisEnv <- hoistEither $ genesisConfigToEnv genCfg
       logProtocolMagicId trce $ genesisProtocolMagicId genCfg
 
       -- If the DB is empty it will be inserted, otherwise it will be validated (to make
@@ -142,37 +146,43 @@ runDbSyncNode plugin enp =
       liftIO $ do
         -- Must run plugin startup after the genesis distribution has been inserted/validate.
         runDbStartup trce plugin
-        let networkMagic = genesisNetworkMagic genCfg
+
         case genCfg of
           GenesisByron bCfg ->
-            runDbSyncNodeNodeClient ByronEnv
-                iomgr trce plugin (mkByronCodecConfig bCfg) networkMagic (enpSocketPath enp)
-          GenesisShelley sCfg ->
-            runDbSyncNodeNodeClient (ShelleyEnv $ Shelley.sgNetworkId sCfg)
-                iomgr trce plugin shelleyCodecConfig networkMagic (enpSocketPath enp)
-          GenesisCardano bCfg sCfg -> do
-            liftIO $ logInfo trce "Running GenesisCardano"
-            runDbSyncNodeNodeClient (ShelleyEnv $ Shelley.sgNetworkId sCfg)
-                iomgr trce plugin (CardanoCodecConfig (mkByronCodecConfig bCfg) shelleyCodecConfig)
-                networkMagic (enpSocketPath enp)
+            runDbSyncNodeNodeClient genesisEnv
+                iomgr trce plugin (mkByronCodecConfig bCfg) (enpSocketPath enp)
+          GenesisShelley _sCfg ->
+            runDbSyncNodeNodeClient genesisEnv
+                iomgr trce plugin shelleyCodecConfig (enpSocketPath enp)
+          GenesisCardano bCfg _sCfg -> do
+
+            demoSlotToTimeEpoch trce (enpSocketPath enp) (envSystemStart genesisEnv)
+
+            runDbSyncNodeNodeClient genesisEnv
+                iomgr trce plugin (cardanoCodecConfig bCfg) (enpSocketPath enp)
   where
     shelleyCodecConfig :: CodecConfig (ShelleyBlock TPraosStandardCrypto)
     shelleyCodecConfig = ShelleyCodecConfig
+
+    cardanoCodecConfig :: Byron.Config -> CodecConfig (CardanoBlock TPraosStandardCrypto)
+    cardanoCodecConfig cfg = CardanoCodecConfig (mkByronCodecConfig cfg) shelleyCodecConfig
+
+
 
 -- -------------------------------------------------------------------------------------------------
 
 runDbSyncNodeNodeClient
     :: forall blk. (MkDbAction blk, RunNode blk)
     => DbSyncEnv -> IOManager -> Trace IO Text -> DbSyncNodePlugin
-    -> CodecConfig blk-> NetworkMagic -> SocketPath
+    -> CodecConfig blk-> SocketPath
     -> IO ()
-runDbSyncNodeNodeClient env iomgr trce plugin codecConfig magic (SocketPath socketPath) = do
+runDbSyncNodeNodeClient env iomgr trce plugin codecConfig (SocketPath socketPath) = do
   queryVar <- newStateQueryTMVar
   logInfo trce $ "localInitiatorNetworkApplication: connecting to node via " <> textShow socketPath
   void $ subscribe
     (localSnocket iomgr socketPath)
     codecConfig
-    magic
+    (envNetworkMagic env)
     networkSubscriptionTracers
     clientSubscriptionParams
     (dbSyncProtocols trce env plugin queryVar)
@@ -367,7 +377,7 @@ chainSyncClient trce metrics latestPoints currentTip actionQueue =
                 Gauge.set (withOrigin 0 (fromIntegral . unBlockNo) (getTipBlockNo tip))
                           (mNodeHeight metrics)
                 newSize <- atomically $ do
-                  writeDbActionQueue actionQueue $ mkDbApply blk tip
+                  writeDbActionQueue actionQueue $ mkDbApply blk
                   lengthDbActionQueue actionQueue
                 Gauge.set (fromIntegral newSize) $ mQueuePostWrite metrics
                 pure $ finish (At (blockNo blk)) tip

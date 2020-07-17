@@ -35,11 +35,11 @@ insertCardanoBlock
     -> ReaderT SqlBackend (LoggingT IO) (Either DbSyncNodeError ())
 insertCardanoBlock tracer env blkTip = do
   case blkTip of
-    ByronBlockTip blk tip ->
-      Byron.insertByronBlock tracer blk tip
-    ShelleyBlockTip blk tip ->
-      Shelley.insertShelleyBlock tracer env blk tip
-    CardanoBlockTip cblk _tip ->
+    ByronBlockTip blk ->
+      Byron.insertByronBlock tracer blk
+    ShelleyBlockTip blk ->
+      Shelley.insertShelleyBlock tracer env blk
+    CardanoBlockTip cblk ->
       case cblk of
         BlockByron (ByronBlock _blk _slot _hash) ->
           panic "insertCardanoBlock: BlockByron"

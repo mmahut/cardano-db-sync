@@ -76,7 +76,7 @@ epochPluginInsertBlock :: Trace IO Text -> DbSyncEnv -> CardanoBlockTip -> Reade
 epochPluginInsertBlock trce _env blkTip = do
   slotsPerEpoch <- liftIO $ readIORef slotsPerEpochVar
   case blkTip of
-    ByronBlockTip bblk _tip ->
+    ByronBlockTip bblk ->
       case byronBlockRaw bblk of
         Byron.ABOBBoundary {} ->
           -- For the OBFT era there are no boundary blocks so we ignore them even in
@@ -85,9 +85,9 @@ epochPluginInsertBlock trce _env blkTip = do
 
         Byron.ABOBBlock blk ->
           insertBlock trce (Byron.epochNumber blk slotsPerEpoch) (SlotNo $ Byron.slotNumber blk)
-    ShelleyBlockTip sblk _tip ->
+    ShelleyBlockTip sblk ->
       insertBlock trce (Shelley.epochNumber sblk slotsPerEpoch) (SlotNo $ Shelley.slotNumber sblk)
-    CardanoBlockTip cblk _tip ->
+    CardanoBlockTip cblk ->
       case cblk of
         BlockByron (ByronBlock bblk slot _hash) ->
           case bblk of

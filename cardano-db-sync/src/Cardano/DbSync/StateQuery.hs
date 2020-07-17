@@ -15,8 +15,6 @@ module Cardano.DbSync.StateQuery
   -- Export to keep the compiler happy.
     demoSlotToTimeEpoch
   , mainnetCardanoLocalNodeConnectInfo
-  , queryLocalTip
-  , queryHistoryInterpreter
   , getInterpreter
 
   , StateQueryTMVar (..)
@@ -24,7 +22,7 @@ module Cardano.DbSync.StateQuery
   , localStateQueryHandler
   ) where
 
-import           Cardano.Api.Typed (CardanoMode, LocalNodeConnectInfo (..), NetworkId (Testnet),
+import           Cardano.Api.Typed (CardanoMode, LocalNodeConnectInfo (..), NetworkId (Mainnet),
                     NodeConsensusMode (..), queryNodeLocalState)
 import           Cardano.Api.LocalChainSync (getLocalTip)
 
@@ -50,9 +48,8 @@ import           Ouroboros.Consensus.HardFork.Combinator.Ledger.Query (QueryHard
 import           Ouroboros.Consensus.HardFork.History.Qry (Qry (..), Interpreter, interpretQuery)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
-import           Ouroboros.Network.Block (Point (..), Tip, getTipPoint)
+import           Ouroboros.Network.Block (getTipPoint)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure, LocalStateQuery)
-import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 -- import           Prelude (String)
 -- import qualified Prelude
@@ -74,29 +71,30 @@ localStateQueryHandler = panic "Cardano.DbSync.StateQuery.localStateQueryHandler
 demoSlotToTimeEpoch :: Trace IO Text -> SocketPath -> SystemStart -> IO ()
 demoSlotToTimeEpoch tracer socket start = do
   res <- getInterpreter socket
+  logInfo tracer $ "demoSlotToTimeEpoch: have interpreter"
   case res of
     Left err -> logError tracer $ "demoSlotToTimeEpoch: " <> textShow err
     Right interp -> do
-      let ires = interpretQuery interp (slotToTimeEpoch start (SlotNo 10))
+      let ires = interpretQuery interp (slotToTimeEpoch start (SlotNo 100000))
       logInfo tracer $ "demoSlotToTimeEpoch: " <> textShow ires
 
 getInterpreter :: SocketPath -> IO (Either AcquireFailure (Interpreter (CardanoEras TPraosStandardCrypto)))
 getInterpreter spath = do
   let connInfo = mainnetCardanoLocalNodeConnectInfo spath
-  point <- getTipPoint <$> queryLocalTip connInfo
-  queryHistoryInterpreter connInfo (point, QueryHardFork GetInterpreter)
+  point <- getTipPoint <$> getLocalTip connInfo
+  queryNodeLocalState connInfo (point, QueryHardFork GetInterpreter)
 
 relToUTCTime :: SystemStart -> RelativeTime -> UTCTime
 relToUTCTime (SystemStart start) (RelativeTime rel) = addUTCTime rel start
 
 slotToTimeEpoch :: SystemStart -> SlotNo -> Qry (UTCTime, EpochNo)
 slotToTimeEpoch start absSlot = do
-    relSlot <- QAbsToRelSlot absSlot
-    relTime <- QRelSlotToTime relSlot
-    utcTime <- relToUTCTime start <$> QRelToAbsTime relTime
-    epochSlot <- QRelSlotToEpoch relSlot
-    absEpoch  <- QRelToAbsEpoch  epochSlot
-    pure (utcTime, absEpoch)
+  relSlot <- QAbsToRelSlot absSlot
+  relTime <- QRelSlotToTime relSlot
+  utcTime <- relToUTCTime start <$> QRelToAbsTime relTime
+  epochSlot <- QRelSlotToEpoch relSlot
+  absEpoch  <- QRelToAbsEpoch  epochSlot
+  pure (utcTime, absEpoch)
 
 -- -------------------------------------------------------------------------------------------------
 
@@ -106,24 +104,9 @@ mainnetCardanoLocalNodeConnectInfo
 mainnetCardanoLocalNodeConnectInfo (SocketPath path) =
   LocalNodeConnectInfo
     { localNodeSocketPath = path
-    , localNodeNetworkId = Testnet (NetworkMagic 42)
+    , localNodeNetworkId = Mainnet
     , localNodeConsensusMode = CardanoMode (EpochSlots 21600) (SecurityParam 10)
     }
-
-queryLocalTip
-    :: LocalNodeConnectInfo CardanoMode (CardanoBlock TPraosStandardCrypto)
-    -> IO (Tip (CardanoBlock TPraosStandardCrypto))
-queryLocalTip = getLocalTip
-
-queryHistoryInterpreter
-    :: LocalNodeConnectInfo CardanoMode (CardanoBlock TPraosStandardCrypto)
-    -> ( Point (CardanoBlock TPraosStandardCrypto)
-       , Query (CardanoBlock TPraosStandardCrypto) (Interpreter (CardanoEras TPraosStandardCrypto))
-       )
-    -> IO (Either AcquireFailure (Interpreter (CardanoEras TPraosStandardCrypto)))
-queryHistoryInterpreter = queryNodeLocalState
-
-
 
 
 

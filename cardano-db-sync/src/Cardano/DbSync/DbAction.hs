@@ -22,10 +22,10 @@ import           Control.Concurrent.STM.TBQueue (TBQueue)
 import qualified Control.Concurrent.STM.TBQueue as TBQ
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
-import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
+import           Ouroboros.Consensus.Cardano.Block (CardanoBlock, HardForkBlock (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
-import           Ouroboros.Network.Block (Point (..), Tip)
+import           Ouroboros.Network.Block (Point (..))
 
 data DbAction
   = DbApplyBlock !CardanoBlockTip
@@ -38,21 +38,26 @@ newtype DbActionQueue = DbActionQueue
   }
 
 class MkDbAction blk where
-  mkDbApply :: blk -> Tip blk -> DbAction
+  mkDbApply :: blk -> DbAction
   mkDbRollback :: Point blk -> DbAction
 
 
 instance MkDbAction ByronBlock where
-  mkDbApply blk tip = DbApplyBlock (ByronBlockTip blk tip)
+  mkDbApply blk = DbApplyBlock (ByronBlockTip blk)
   mkDbRollback point = DbRollBackToPoint (ByronPoint point)
 
 instance MkDbAction (ShelleyBlock TPraosStandardCrypto) where
-  mkDbApply blk tip = DbApplyBlock (ShelleyBlockTip blk tip)
+  mkDbApply blk = DbApplyBlock (ShelleyBlockTip blk)
   mkDbRollback point = DbRollBackToPoint (ShelleyPoint point)
 
 instance MkDbAction (CardanoBlock TPraosStandardCrypto) where
-  mkDbApply _blk _tip = DbApplyBlock (panic "mkDbApply: CardanoBlock")
-  mkDbRollback _point = DbRollBackToPoint (panic "mkDbRollback: CardanoBlock")
+  mkDbApply cblk = do
+    case cblk of
+      BlockByron blk -> DbApplyBlock (ByronBlockTip blk)
+      BlockShelley blk -> DbApplyBlock (ShelleyBlockTip blk)
+
+  mkDbRollback point =
+      DbRollBackToPoint (CardanoPoint point)
 
 
 

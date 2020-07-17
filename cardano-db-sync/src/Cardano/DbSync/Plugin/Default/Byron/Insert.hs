@@ -45,8 +45,6 @@ import           Cardano.DbSync.Error
 import           Cardano.DbSync.Util
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
-import           Ouroboros.Network.Block (BlockNo (..), Tip, getTipBlockNo)
-import           Ouroboros.Network.Point (withOrigin)
 
 -- Trivial local data type for use in place of a tuple.
 data ValueFee = ValueFee
@@ -55,12 +53,12 @@ data ValueFee = ValueFee
   }
 
 insertByronBlock
-    :: Trace IO Text -> ByronBlock -> Tip ByronBlock
+    :: Trace IO Text -> ByronBlock
     -> ReaderT SqlBackend (LoggingT IO) (Either DbSyncNodeError ())
-insertByronBlock tracer blk tip = do
+insertByronBlock tracer blk = do
   runExceptT $
     case byronBlockRaw blk of
-      Byron.ABOBBlock ablk -> insertABlock tracer ablk tip
+      Byron.ABOBBlock ablk -> insertABlock tracer ablk
       Byron.ABOBBoundary abblk -> insertABOBBoundary tracer abblk
 
 insertABOBBoundary
@@ -104,9 +102,9 @@ insertABOBBoundary tracer blk = do
 
 insertABlock
     :: (MonadBaseControl IO m, MonadIO m)
-    => Trace IO Text -> Byron.ABlock ByteString -> Tip ByronBlock
+    => Trace IO Text -> Byron.ABlock ByteString
     -> ExceptT DbSyncNodeError (ReaderT SqlBackend m) ()
-insertABlock tracer blk tip = do
+insertABlock tracer blk = do
     meta <- liftLookupFail "insertABlock" DB.queryMeta
     pbid <- liftLookupFail "insertABlock" $ DB.queryBlockId (Byron.unHeaderHash $ Byron.blockPreviousHash blk)
 
@@ -135,7 +133,9 @@ insertABlock tracer blk tip = do
     zipWithM_ (insertTx tracer blkId) (Byron.blockPayload blk) [ 0 .. ]
 
     liftIO $ do
-      let followingClosely = withOrigin 0 unBlockNo (getTipBlockNo tip) - Byron.blockNumber blk < 20
+      logInfo tracer "insertABlock: need to calculate followingClosely"
+      let followingClosely = True
+                             -- withOrigin 0 unBlockNo (getTipBlockNo tip) - Byron.blockNumber blk < 20
           (epoch, slotWithinEpoch) = Byron.slotNumber blk `divMod` slotsPerEpoch
       when (followingClosely && slotWithinEpoch /= 0 && Byron.slotNumber blk > 0 && Byron.slotNumber blk `mod` 20 == 0) $ do
         logInfo tracer $
@@ -151,7 +151,7 @@ insertABlock tracer blk tip = do
   where
     logger :: Trace IO a -> a -> IO ()
     logger
-      | withOrigin 0 unBlockNo (getTipBlockNo tip) - Byron.blockNumber blk < 20 = logInfo
+      -- | withOrigin 0 unBlockNo (getTipBlockNo tip) - Byron.blockNumber blk < 20 = logInfo
       | Byron.slotNumber blk `mod` 5000 == 0 = logInfo
       | otherwise = logDebug
 

@@ -103,7 +103,7 @@ checkDbState trce xs =
     validateBlock :: CardanoBlockTip -> ExceptT DbSyncNodeError IO NextState
     validateBlock cblk = do
       case cblk of
-        ByronBlockTip bblk _ ->
+        ByronBlockTip bblk ->
           case byronBlockRaw bblk of
             Ledger.ABOBBoundary _ -> left $ NEError "checkDbState got a boundary block"
             Ledger.ABOBBlock chBlk -> do
@@ -128,7 +128,7 @@ checkDbState trce xs =
     isMainBlockApply :: DbAction -> Bool
     isMainBlockApply dba =
       case dba of
-        DbApplyBlock (ByronBlockTip blk _tip) ->
+        DbApplyBlock (ByronBlockTip blk) ->
           case byronBlockRaw blk of
             Ledger.ABOBBlock _ -> True
             Ledger.ABOBBoundary _ -> False

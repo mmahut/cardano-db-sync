@@ -43,7 +43,7 @@ import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (SystemStart
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
-import           Ouroboros.Network.Block (BlockNo (..), Tip)
+-- import           Ouroboros.Network.Block (BlockNo (..))
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
@@ -54,9 +54,9 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 
 insertShelleyBlock
-    :: Trace IO Text -> DbSyncEnv -> ShelleyBlock TPraosStandardCrypto -> Tip (ShelleyBlock TPraosStandardCrypto)
+    :: Trace IO Text -> DbSyncEnv -> ShelleyBlock TPraosStandardCrypto
     -> ReaderT SqlBackend (LoggingT IO) (Either DbSyncNodeError ())
-insertShelleyBlock tracer env blk tip = do
+insertShelleyBlock tracer env blk = do
   runExceptT $ do
     meta <- liftLookupFail "insertShelleyBlock" DB.queryMeta
     pbid <- liftLookupFail "insertShelleyBlock" $ DB.queryBlockId (Shelley.blockPrevHash blk)
@@ -104,9 +104,10 @@ insertShelleyBlock tracer env blk tip = do
   where
     logger :: Trace IO a -> a -> IO ()
     logger
-      | unBlockNo (tipBlockNo tip) - Shelley.blockNumber blk < 20 = logInfo
+      -- | unBlockNo (tipBlockNo tip) - Shelley.blockNumber blk < 20 = logInfo
       | Shelley.slotNumber blk `mod` 5000 == 0 = logInfo
-      | otherwise = logDebug
+      | otherwise =
+          if True then panic "insertShelleyBlock.logger" else logDebug
 
 -- -----------------------------------------------------------------------------
 

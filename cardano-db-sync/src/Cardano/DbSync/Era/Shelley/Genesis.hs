@@ -43,8 +43,7 @@ import           Cardano.DbSync.Util
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types
-                  (mkSlotLength, slotLengthToMillisec)
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (mkSlotLength, slotLengthToMillisec)
 
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley

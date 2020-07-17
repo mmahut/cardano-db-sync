@@ -43,6 +43,7 @@ import qualified Cardano.Crypto.KES.Class as KES
 import qualified Cardano.Crypto.VRF.Class as VRF
 
 import qualified Cardano.Db as Db
+import           Cardano.DbSync.Config
 import           Cardano.DbSync.Types
 
 import qualified Data.ByteString.Base16 as Base16
@@ -143,9 +144,10 @@ slotNumber = unSlotNo . Shelley.bheaderSlotNo . blockBody
 stakingCredHash :: DbSyncEnv -> ShelleyStakingCred -> ByteString
 stakingCredHash env cred =
   let network =
-        case env of
-          ByronEnv -> Shelley.Mainnet -- Should not happen
-          ShelleyEnv nw -> nw
+        case envProtocol env of
+          DbSyncProtocolByron -> Shelley.Mainnet -- Should not happen
+          DbSyncProtocolShelley -> envNetwork env
+          DbSyncProtocolCardano -> envNetwork env
   in Shelley.serialiseRewardAcnt $ Shelley.RewardAcnt network cred
 
 

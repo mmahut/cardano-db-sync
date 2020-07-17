@@ -27,15 +27,19 @@ module Cardano.DbSync.Types
   ) where
 
 import           Cardano.Db (MigrationDir (..))
+import           Cardano.DbSync.Config
 
 import           Cardano.Slotting.Slot (SlotNo (..))
 
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (SystemStart)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
 import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Protocol as Shelley
-import           Ouroboros.Network.Block (Point (..), Tip)
+
+import           Ouroboros.Network.Block (Point (..))
+import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
@@ -45,10 +49,12 @@ import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
+
+-- No longer contains a Tip value because the Tip value was useless.
 data CardanoBlockTip
-  = ByronBlockTip !ByronBlock !(Tip ByronBlock)
-  | ShelleyBlockTip !(Shelley.ShelleyBlock TPraosStandardCrypto) !(Tip (Shelley.ShelleyBlock TPraosStandardCrypto))
-  | CardanoBlockTip !(CardanoBlock TPraosStandardCrypto) !(Tip (CardanoBlock TPraosStandardCrypto))
+  = ByronBlockTip !ByronBlock
+  | ShelleyBlockTip !(Shelley.ShelleyBlock TPraosStandardCrypto)
+  | CardanoBlockTip !(CardanoBlock TPraosStandardCrypto)
 
 data CardanoPoint
   = ByronPoint !(Point ByronBlock)
@@ -67,9 +73,12 @@ data DbSyncNodeParams = DbSyncNodeParams
   , enpMaybeRollback :: !(Maybe SlotNo)
   }
 
-data DbSyncEnv
-  = ByronEnv
-  | ShelleyEnv !Shelley.Network
+data DbSyncEnv = DbSyncEnv
+  { envProtocol :: !DbSyncProtocol
+  , envNetwork :: !Shelley.Network
+  , envNetworkMagic :: !NetworkMagic
+  , envSystemStart :: !SystemStart
+  }
 
 type ShelleyAddress = Shelley.Addr Shelley.TPraosStandardCrypto
 -- type ShelleyBlock = Shelley.ShelleyBlock Shelley.TPraosStandardCrypto
