@@ -70,47 +70,51 @@ insertValidateGenesisDist tracer networkName cfg = do
         Right bid -> validateGenesisDistribution tracer networkName cfg bid
         Left _ ->
           runExceptT $ do
-            liftIO $ logInfo tracer "Inserting Genesis distribution"
-            count <- lift DB.queryBlockCount
-            when (count > 0) $
-              dbSyncNodeError "Shelley.insertValidateGenesisDist: Genesis data mismatch."
-            void . lift . DB.insertMeta
-                $ DB.Meta
-                    (protocolConstant cfg)
-                    (configSlotDuration cfg)
-                    (configStartTime cfg)
-                    (configSlotsPerEpoch cfg)
-                    (Just networkName)
-            -- Insert an 'artificial' Genesis block (with a genesis specific slot leader). We
-            -- need this block to attach the genesis distribution transactions to.
-            -- It would be nice to not need this artificial block, but that would
-            -- require plumbing the Genesis.Config into 'insertByronBlockOrEBB'
-            -- which would be a pain in the neck.
-            slid <- lift . DB.insertSlotLeader $ DB.SlotLeader (genesisHashSlotLeader cfg) "Genesis slot leader"
-            bid <- lift . DB.insertBlock $
-                      DB.Block
-                        { DB.blockHash = configGenesisHash cfg
-                        , DB.blockEpochNo = Nothing
-                        , DB.blockSlotNo = Nothing
-                        , DB.blockBlockNo = Nothing
-                        , DB.blockPrevious = Nothing
-                        , DB.blockMerkelRoot = Nothing
-                        , DB.blockSlotLeader = slid
-                        , DB.blockSize = 0
-                        , DB.blockTime = configStartTime cfg
-                        , DB.blockTxCount = 0
+            liftIO $ logInfo tracer "Inserting Shelley Genesis distribution"
+            emeta <- lift DB.queryMeta
+            case emeta of
+              Right _ -> pure () -- Metadata from Byron era already exists. TODO Validate metadata.
+              Left _ -> do
+                count <- lift DB.queryBlockCount
+                when (count > 0) $
+                  dbSyncNodeError $ "Shelley.insertValidateGenesisDist: Genesis data mismatch. count " <> textShow count
+                void . lift . DB.insertMeta
+                    $ DB.Meta
+                        (protocolConstant cfg)
+                        (configSlotDuration cfg)
+                        (configStartTime cfg)
+                        (configSlotsPerEpoch cfg)
+                        (Just networkName)
+                -- Insert an 'artificial' Genesis block (with a genesis specific slot leader). We
+                -- need this block to attach the genesis distribution transactions to.
+                -- It would be nice to not need this artificial block, but that would
+                -- require plumbing the Genesis.Config into 'insertByronBlockOrEBB'
+                -- which would be a pain in the neck.
+                slid <- lift . DB.insertSlotLeader $ DB.SlotLeader (genesisHashSlotLeader cfg) "Shelley Genesis slot leader"
+                bid <- lift . DB.insertBlock $
+                          DB.Block
+                            { DB.blockHash = configGenesisHash cfg
+                            , DB.blockEpochNo = Nothing
+                            , DB.blockSlotNo = Nothing
+                            , DB.blockBlockNo = Nothing
+                            , DB.blockPrevious = Nothing
+                            , DB.blockMerkelRoot = Nothing
+                            , DB.blockSlotLeader = slid
+                            , DB.blockSize = 0
+                            , DB.blockTime = configStartTime cfg
+                            , DB.blockTxCount = 0
 
-                        -- Shelley specific
-                        , DB.blockVrfKey = Nothing
-                        , DB.blockOpCert = Nothing
-                        , DB.blockProtoVersion = Nothing
-                        }
-            lift $ mapM_ (insertTxOuts bid) $ genesisUtxOs cfg
-            liftIO . logInfo tracer $ "Initial genesis distribution populated. Hash "
-                            <> renderByteArray (configGenesisHash cfg)
+                            -- Shelley specific
+                            , DB.blockVrfKey = Nothing
+                            , DB.blockOpCert = Nothing
+                            , DB.blockProtoVersion = Nothing
+                            }
+                lift $ mapM_ (insertTxOuts bid) $ genesisUtxOs cfg
+                liftIO . logInfo tracer $ "Initial genesis distribution populated. Hash "
+                                <> renderByteArray (configGenesisHash cfg)
 
-            supply <- lift $ DB.queryTotalSupply
-            liftIO $ logInfo tracer ("Total genesis supply of Ada: " <> DB.renderAda supply)
+                supply <- lift $ DB.queryTotalSupply
+                liftIO $ logInfo tracer ("Total genesis supply of Ada: " <> DB.renderAda supply)
 
 -- | Validate that the initial Genesis distribution in the DB matches the Genesis data.
 validateGenesisDistribution

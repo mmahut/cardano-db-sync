@@ -60,7 +60,7 @@ insertValidateGenesisDist tracer networkName cfg = do
         Right bid -> validateGenesisDistribution tracer networkName cfg bid
         Left _ ->
           runExceptT $ do
-            liftIO $ logInfo tracer "Inserting Genesis distribution"
+            liftIO $ logInfo tracer "Inserting Byron Genesis distribution"
             count <- lift DB.queryBlockCount
             when (count > 0) $
               dbSyncNodeError "insertValidateGenesisDist: Genesis data mismatch."
