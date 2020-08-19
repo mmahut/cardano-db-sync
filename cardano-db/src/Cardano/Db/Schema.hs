@@ -93,7 +93,7 @@ share
 
   Tx
     hash                ByteString          sqltype=hash32type
-    block               BlockId                                 -- This type is the primary key for the 'block' table.
+    block               BlockId             OnDeleteCascade     -- This type is the primary key for the 'block' table.
     blockIndex          Word64              sqltype=uinteger    -- The index of this transaction within the block.
     outSum              Word64              sqltype=lovelace
     fee                 Word64              sqltype=lovelace
@@ -102,7 +102,7 @@ share
     UniqueTx            hash
 
   TxOut
-    txId                TxId                -- This type is the primary key for the 'tx' table.
+    txId                TxId                OnDeleteCascade     -- This type is the primary key for the 'tx' table.
     index               Word16              sqltype=txindex
     address             Text
     addressRaw          ByteString
@@ -111,8 +111,8 @@ share
     UniqueTxout         txId index          -- The (tx_id, index) pair must be unique.
 
   TxIn
-    txInId              TxId                -- The transaction where this is used as an input.
-    txOutId             TxId                -- The transaction where this was created as an output.
+    txInId              TxId                OnDeleteCascade     -- The transaction where this is used as an input.
+    txOutId             TxId                OnDeleteCascade     -- The transaction where this was created as an output.
     txOutIndex          Word16              sqltype=txindex
     UniqueTxin          txOutId txOutIndex
 
@@ -152,7 +152,7 @@ share
   StakeAddress          -- Can be an address of a script hash
     hashRaw             ByteString          sqltype=addr29type
     view                Text
-    registeredTxId      TxId                -- Only used for rollback.
+    registeredTxId      TxId                OnDeleteCascade     -- Only used for rollback.
     UniqueStakeAddress  hashRaw
 
   -- -----------------------------------------------------------------------------------------------
@@ -161,7 +161,7 @@ share
   PoolMetaData
     url                 Text
     hash                ByteString          sqltype=hash32type
-    registeredTxId      TxId                -- Only used for rollback.
+    registeredTxId      TxId                OnDeleteCascade     -- Only used for rollback.
     UniquePoolMetaData  url hash
 
   PoolUpdate
@@ -173,24 +173,24 @@ share
     meta                PoolMetaDataId Maybe
     margin              Double                                  -- sqltype=percentage????
     fixedCost           Word64              sqltype=lovelace
-    registeredTxId      TxId                                    -- Slot number in which the pool was registered.
+    registeredTxId      TxId                OnDeleteCascade     -- Slot number in which the pool was registered.
     UniquePoolUpdate    hashId registeredTxId
 
   PoolOwner
     hash                ByteString          sqltype=hash28type
-    poolHashId          PoolHashId
+    poolHashId          PoolHashId          OnDeleteCascade
     registeredTxId      TxId                                    -- Slot number in which the owner was registered.
     UniquePoolOwner     hash poolHashId
 
   PoolRetire
     hashId              PoolHashId
     certIndex           Word16
-    announcedTxId       TxId                                    -- Slot number in which the pool announced it was retiring.
+    announcedTxId       TxId                OnDeleteCascade     -- Slot number in which the pool announced it was retiring.
     retiringEpoch       Word64              sqltype=uinteger    -- Epoch number in which the pool will retire.
     UniquePoolRetiring  hashId
 
   PoolRelay
-    updateId            PoolUpdateId
+    updateId            PoolUpdateId        OnDeleteCascade
     ipv4                Text Maybe
     ipv6                Text Maybe
     dnsName             Text Maybe
@@ -209,41 +209,41 @@ share
     certIndex           Word16
     -- poolId              PoolHashId
     amount              Word64              sqltype=lovelace
-    txId                TxId
+    txId                TxId                OnDeleteCascade
     UniqueReserves      addrId txId
 
   Withdrawal
     addrId              StakeAddressId
     -- poolId              PoolHashId
     amount              Word64              sqltype=lovelace
-    txId                TxId
+    txId                TxId                OnDeleteCascade
     UniqueWithdrawal    addrId txId
 
   Delegation
     addrId              StakeAddressId
     certIndex           Word16
     poolHashId          PoolHashId
-    txId                TxId
+    txId                TxId                OnDeleteCascade
     UniqueDelegation    addrId poolHashId txId
 
   -- When was a staking key/script registered
   StakeRegistration
     addrId              StakeAddressId
     certIndex           Word16
-    txId                TxId
+    txId                TxId                OnDeleteCascade
     UniqueStakeRegistration addrId txId
 
   -- When was a staking key/script deregistered
   StakeDeregistration
     addrId              StakeAddressId
     certIndex           Word16
-    txId                TxId
+    txId                TxId                OnDeleteCascade
     UniqueStakeDeregistration addrId txId
 
   TxMetadata
     key                 DbWord64            sqltype=word64type
     json                Text                sqltype=jsonb
-    txId                TxId
+    txId                TxId                OnDeleteCascade
     UniqueTxMetadata    key txId
 
   -- -----------------------------------------------------------------------------------------------
@@ -256,12 +256,12 @@ share
     certIndex           Word16
     -- poolId              PoolHashId
     amount              Word64              sqltype=lovelace
-    txId                TxId
+    txId                TxId                OnDeleteCascade
     UniqueReward        addrId txId
 
   Stake
     addrId              StakeAddressId
-    txId                TxId
+    txId                TxId                OnDeleteCascade
     stake               Word64              sqltype=lovelace
     UniqueStake         addrId stake
 
@@ -270,7 +270,7 @@ share
     certIndex           Word16
     -- poolId              PoolHashId
     amount              Word64              sqltype=lovelace
-    txId                TxId
+    txId                TxId                OnDeleteCascade
     UniqueTreasury      addrId txId
 
   -- -----------------------------------------------------------------------------------------------
@@ -297,7 +297,7 @@ share
     minUTxOValue        Word64 Maybe        sqltype=lovelace
     minPoolCost         Word64 Maybe        sqltype=lovelace
 
-    registeredTxId      TxId                -- Slot number in which update registered.
+    registeredTxId      TxId                OnDeleteCascade -- Slot number in which update registered.
     UniqueParamUpdate   key registeredTxId
 
   |]
