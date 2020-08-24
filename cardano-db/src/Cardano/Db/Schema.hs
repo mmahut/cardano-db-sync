@@ -40,7 +40,6 @@ import Database.Persist.TH
 
 share
   [ mkPersist sqlSettings
-  , mkDeleteCascade sqlSettings
   , mkMigrate "migrateCardanoDb"
   ]
   [persistLowerCase|
@@ -270,8 +269,10 @@ share
     certIndex           Word16
     -- poolId              PoolHashId
     amount              Word64              sqltype=lovelace
-    txId                TxId                OnDeleteCascade
-    UniqueTreasury      addrId txId
+    registeredTxId      TxId
+
+    Foreign             Tx                  OnDeleteCascade OnUpdateCascade fktx registeredTxId
+    UniqueTreasury      addrId registeredTxId
 
   -- -----------------------------------------------------------------------------------------------
   -- Table to hold parameter updates.
@@ -297,7 +298,7 @@ share
     minUTxOValue        Word64 Maybe        sqltype=lovelace
     minPoolCost         Word64 Maybe        sqltype=lovelace
 
-    registeredTxId      TxId                OnDeleteCascade -- Slot number in which update registered.
+    registeredTxId      TxId                -- Slot number in which update registered.
     UniqueParamUpdate   key registeredTxId
 
   |]
