@@ -10,7 +10,7 @@ import           Control.Monad.Trans.Reader (ReaderT)
 
 import           Data.Word (Word64)
 
-import           Database.Persist.Sql (SqlBackend, (==.), deleteCascade, selectKeysList)
+import           Database.Persist.Sql (SqlBackend, (==.), delete, selectKeysList)
 
 import           Cardano.Db.Schema
 
@@ -22,7 +22,7 @@ import           Ouroboros.Network.Block (BlockNo (..))
 deleteCascadeBlock :: MonadIO m => Block -> ReaderT SqlBackend m Bool
 deleteCascadeBlock block = do
   keys <- selectKeysList [ BlockHash ==. blockHash block ] []
-  mapM_ deleteCascade keys
+  mapM_ delete keys
   pure $ not (null keys)
 
 -- | Delete a block if it exists. Returns 'True' if it did exist and has been
@@ -30,7 +30,7 @@ deleteCascadeBlock block = do
 deleteCascadeBlockNo :: MonadIO m => BlockNo -> ReaderT SqlBackend m Bool
 deleteCascadeBlockNo (BlockNo blockNo) = do
   keys <- selectKeysList [ BlockBlockNo ==. Just blockNo ] []
-  mapM_ deleteCascade keys
+  mapM_ delete keys
   pure $ not (null keys)
 
 -- | Delete a block if it exists. Returns 'True' if it did exist and has been
@@ -38,6 +38,6 @@ deleteCascadeBlockNo (BlockNo blockNo) = do
 deleteCascadeSlotNo :: MonadIO m => Word64 -> ReaderT SqlBackend m Bool
 deleteCascadeSlotNo slotNo = do
   keys <- selectKeysList [ BlockSlotNo ==. Just slotNo ] []
-  mapM_ deleteCascade keys
+  mapM_ delete keys
   pure $ not (null keys)
 

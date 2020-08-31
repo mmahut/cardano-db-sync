@@ -388,7 +388,7 @@ insertMirCert _tracer env txId idx mcert = do
         DB.Treasury
           { DB.treasuryAddrId = addrId
           , DB.treasuryCertIndex = idx
-          , DB.treasuryTxId = txId
+          , DB.treasuryRegisteredTxId = txId
           , DB.treasuryAmount = fromIntegral $ Shelley.unCoin coin
           }
 

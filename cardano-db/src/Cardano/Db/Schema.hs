@@ -26,6 +26,7 @@ import Data.Time.Clock (UTCTime)
 import Data.Word (Word16, Word64)
 import Data.WideWord.Word128 (Word128)
 
+import Database.Persist.Class (toBackendKey)
 -- Do not use explicit imports from this module as the imports can change
 -- from version to version due to changes to the TH code in Persistent.
 import Database.Persist.TH
