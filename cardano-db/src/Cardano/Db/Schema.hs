@@ -77,7 +77,7 @@ share
     slotNo              Word64 Maybe        sqltype=uinteger
     epochSlotNo         Word64 Maybe        sqltype=uinteger
     blockNo             Word64 Maybe        sqltype=uinteger
-    previous            BlockId Maybe       OnDeleteSetNull
+    previous            BlockId Maybe
     -- Shelley does not have a Merkel Root, but Byron does.
     -- Once we are well into the Shelley era, this column can be dropped.
     merkelRoot          ByteString Maybe    sqltype=hash32type
@@ -89,6 +89,7 @@ share
     vrfKey              ByteString Maybe    sqltype=hash32type
     opCert              ByteString Maybe    sqltype=hash32type
     protoVersion        Text Maybe
+    Foreign             Block               OnDeleteSetNull fkBlock previous References Id
     UniqueBlock         hash
 
   Tx
