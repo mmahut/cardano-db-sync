@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Cardano.DbSync.Plugin.Default
   ( defDbSyncNodePlugin
   , insertDefaultBlock

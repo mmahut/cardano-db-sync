@@ -59,8 +59,8 @@ isFullySynced sd = isSyncedWithinSeconds sd 120
 isSyncedWithinSeconds :: SlotDetails -> Word -> SyncState
 isSyncedWithinSeconds sd target =
   -- diffUTCTime returns seconds.
-  let secDiff = ceiling (diffUTCTime (sdCurrentTime sd) (sdSlotTime sd))
-  in if abs secDiff <= target
+  let secDiff = ceiling (diffUTCTime (sdCurrentTime sd) (sdSlotTime sd)) :: Int
+  in if fromIntegral (abs secDiff) <= target
         then SyncFollowing
         else SyncLagging
 
