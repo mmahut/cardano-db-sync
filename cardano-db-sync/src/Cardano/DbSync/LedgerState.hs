@@ -213,3 +213,4 @@ readLedgerState (LedgerStateVar stateVar) =
 safeRemoveFile :: FilePath -> IO ()
 safeRemoveFile fp = handle (\(_ :: IOException) -> pure ()) $ removeFile fp
 
+

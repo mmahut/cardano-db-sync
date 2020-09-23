@@ -65,11 +65,13 @@ import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
+import Text.Show.Pretty (ppShow)
+import qualified System.IO as IO
 
 insertShelleyBlock
-    :: Trace IO Text -> DbSyncEnv -> ShelleyBlock -> LedgerState CardanoBlock -> SlotDetails
+    :: Trace IO Text -> DbSyncEnv -> ShelleyBlock -> LedgerState ShelleyBlock -> SlotDetails
     -> ReaderT SqlBackend (LoggingT IO) (Either DbSyncNodeError ())
-insertShelleyBlock tracer env blk _ledger details = do
+insertShelleyBlock tracer env blk ledgerState details = do
   runExceptT $ do
     pbid <- liftLookupFail "insertShelleyBlock" $ DB.queryBlockId (Shelley.blockPrevHash blk)
     mPhid <- lift $ queryPoolHashId (Shelley.blockVrfKeyToPoolHash blk)
@@ -115,6 +117,21 @@ insertShelleyBlock tracer env blk _ledger details = do
         , ", block ", textShow (Shelley.blockNumber blk)
         , ", hash ", renderByteArray (Shelley.blockHash blk)
         ]
+
+    when (unEpochNo (sdEpochNo details) > 209) . liftIO $ do
+      -- Erik was here!!!
+      let slotNoStr = show (unEpochSlot (sdEpochSlot details))
+      logInfo tracer $ mconcat
+            [ "insertShelleyBlock: slot ", textShow (unEpochNo (sdEpochNo details))
+            , " ", textShow (unEpochSlot (sdEpochSlot details))
+            ]
+      IO.writeFile
+            ("rewards-state-" ++ show (unEpochNo (sdEpochNo details)) ++ "-"
+            ++ replicate (6 - length slotNoStr) '0' ++ slotNoStr
+            ++ ".txt"
+            ) $ ppShow (Shelley.ledgerRewardsState ledgerState)
+      when (unEpochSlot (sdEpochSlot details) > 100) $
+        panic "This is where we are!!!"
 
     when (getSyncStatus details == SyncFollowing) $
       -- Serializiing things during syncing can drastically slow down full sync

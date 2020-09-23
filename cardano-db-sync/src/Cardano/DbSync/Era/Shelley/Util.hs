@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -17,12 +18,19 @@ module Cardano.DbSync.Era.Shelley.Util
   , blockVrfKeyToPoolHash
   , epochNumber
   , fakeGenesisHash
+
+  , ledgerAccountState
+  , ledgerDelegationState
+  , ledgerRewardsState
+  , ledgerState
+
   , maybePaymentCred
   , mkSlotLeader
   , nonceToBytes
   , renderAddress
   , renderHash
   , renderRewardAcnt
+  , rewardUpdates
   , slotLeaderHash
   , slotNumber
   , stakingCredHash
@@ -69,7 +77,9 @@ import           Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
+import           Ouroboros.Consensus.HardFork.Combinator.Basics (LedgerState (..))
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley, StandardShelley)
 import           Ouroboros.Network.Block (BlockNo (..))
 
@@ -77,8 +87,10 @@ import qualified Shelley.Spec.Ledger.Address as Shelley
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.BlockChain as Shelley
+import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Hashing as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
+import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.MetaData as Shelley
 import qualified Shelley.Spec.Ledger.OCert as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
@@ -148,6 +160,18 @@ maybePaymentCred addr =
     Shelley.AddrBootstrap {} ->
       Nothing
 
+ledgerAccountState :: LedgerState ShelleyBlock -> Shelley.AccountState
+ledgerAccountState = Shelley.esAccountState . Shelley.nesEs . Consensus.shelleyLedgerState
+
+ledgerDelegationState :: LedgerState ShelleyBlock -> Shelley.DPState StandardShelley
+ledgerDelegationState = Shelley._delegationState . ledgerState
+
+ledgerRewardsState :: LedgerState ShelleyBlock -> Map (Shelley.Credential 'Shelley.Staking StandardShelley) Coin
+ledgerRewardsState = Shelley._rewards . Shelley._dstate . ledgerDelegationState
+
+ledgerState :: LedgerState ShelleyBlock -> Shelley.LedgerState StandardShelley
+ledgerState = Shelley.esLState . Shelley.nesEs . Consensus.shelleyLedgerState
+
 mkSlotLeader :: ShelleyBlock -> Maybe Db.PoolHashId -> Db.SlotLeader
 mkSlotLeader blk mPoolId =
   let slHash = slotLeaderHash blk
@@ -178,6 +202,14 @@ renderHash = Text.decodeUtf8 . Base16.encode . unHeaderHash
 renderRewardAcnt :: Shelley.RewardAcnt StandardShelley -> Text
 renderRewardAcnt (Shelley.RewardAcnt nw cred) =
     Api.serialiseAddress (Api.StakeAddress nw cred)
+
+rewardUpdates :: Shelley.RewardAccounts era -> Shelley.RewardAccounts era -> Shelley.RewardAccounts era
+rewardUpdates =
+    Map.differenceWith keepUpdate
+  where
+    keepUpdate :: Coin -> Coin -> Maybe Coin
+    keepUpdate a b =
+      if a == b then Nothing else Just b
 
 slotLeaderHash :: ShelleyBlock -> ByteString
 slotLeaderHash =
