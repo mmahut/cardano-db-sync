@@ -496,7 +496,7 @@ insertParamProposal _tracer txId (Shelley.Update (Shelley.ProposedPPUpdates umap
           , DB.paramProposalMonetaryExpandRate = Shelley.unitIntervalToDouble <$> strictMaybeToMaybe (Shelley._rho pmap)
           , DB.paramProposalTreasuryGrowthRate = Shelley.unitIntervalToDouble <$> strictMaybeToMaybe (Shelley._tau pmap)
           , DB.paramProposalDecentralisation = Shelley.unitIntervalToDouble <$> strictMaybeToMaybe (Shelley._d pmap)
-          , DB.paramProposalEntropy = join (Shelley.nonceToBytes <$> strictMaybeToMaybe (Shelley._extraEntropy pmap))
+          , DB.paramProposalEntropy = Shelley.nonceToBytes =<< strictMaybeToMaybe (Shelley._extraEntropy pmap)
           , DB.paramProposalProtocolVersion = strictMaybeToMaybe (Shelley._protocolVersion pmap)
           , DB.paramProposalMinUtxoValue = fromIntegral . Shelley.unCoin <$> strictMaybeToMaybe (Shelley._minUTxOValue pmap)
           , DB.paramProposalMinPoolCost = fromIntegral . Shelley.unCoin <$> strictMaybeToMaybe (Shelley._minPoolCost pmap)

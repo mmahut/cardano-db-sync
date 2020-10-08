@@ -29,7 +29,7 @@ import           Cardano.Prelude
 import           Cardano.Slotting.EpochInfo (EpochInfo, epochInfoEpoch)
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), fromWithOrigin)
 
-import           Control.Concurrent.STM.TVar (TVar, newTVarIO, writeTVar, readTVar)
+import           Control.Concurrent.STM.TVar (TVar, newTVarIO, writeTVar, readTVar, readTVarIO)
 import           Control.Exception (IOException, handle)
 import qualified Control.Exception as Exception
 import           Control.Monad.Extra (firstJustM)
@@ -59,6 +59,8 @@ import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           System.Directory (listDirectory, removeFile)
 import           System.FilePath ((</>), dropExtension, takeExtension)
+
+{- HLINT ignore "Reduce duplication" -}
 
 data CardanoLedgerState = CardanoLedgerState
   { clsState :: !(LedgerState CardanoBlock)
@@ -179,7 +181,7 @@ cleanupLedgerStateFiles stateDir slotNo = do
     -- Remove invalid (ie SlotNo >= current) ledger state files (occurs on rollback).
     mapM_ safeRemoveFile invalid
     -- Remove all but 8 most recent state files.
-    mapM_ safeRemoveFile $ map lsfFilePath (List.drop 8 valid)
+    mapM_ (safeRemoveFile . lsfFilePath) (List.drop 8 valid)
   where
     -- Left files are deleted, Right files are kept.
     keepFile :: LedgerStateFile ->  Either FilePath LedgerStateFile
@@ -246,8 +248,7 @@ listLedgerStateSlotNos :: LedgerStateDir -> IO [SlotNo]
 listLedgerStateSlotNos = fmap3 (SlotNo . lsfSlotNo) listLedgerStateFilesOrdered
 
 readLedgerState :: LedgerStateVar -> IO CardanoLedgerState
-readLedgerState (LedgerStateVar stateVar) =
-  atomically $ readTVar stateVar
+readLedgerState (LedgerStateVar stateVar) = readTVarIO stateVar
 
 -- | Remove given file path and ignore any IOEXceptions.
 safeRemoveFile :: FilePath -> IO ()
