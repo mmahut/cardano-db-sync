@@ -155,7 +155,51 @@ cexplorer=# select pool_hash.view, sum (amount) as lovelace from epoch_stake
 
 ```
 
+### Get the delegation history for a specified stake address
+```
+cexplorer=# select delegation.active_epoch_no, pool_hash.view from delegation
+              inner join stake_address on delegation.addr_id = stake_address.id
+              inner join pool_hash on delegation.pool_hash_id = pool_hash.id
+              where stake_address.view = 'stake1u8gsndukzghdukmqdsd7r7wd6kvamvjv2pzcgag8v6jd69qfqyl5h'
+              order by active_epoch_no asc;
+ active_epoch_no |                           view
+-----------------+----------------------------------------------------------
+             212 | pool1hwlghkwnjsjk8370qt3dvp23d7urwm36f95fmxcz3np2kghknj9
+             214 | pool1xxhs2zw5xa4g54d5p62j46nlqzwp8jklqvuv2agjlapwjx9qkg9
+             216 | pool1hwlghkwnjsjk8370qt3dvp23d7urwm36f95fmxcz3np2kghknj9
+             217 | pool15yyxtkhz64p7a8cnax9l7u82s9t9hdhyxsa3tdm977qhgpnsuhq
+(4 rows)
+```
+This shows that the first delegation became active (ie earning rewards) in epoch 212 and that the
+address owner subsequently re-delegated their stake with those re-delegations that became active
+in epochs 214, 216 and 217.
 
 
+### Get the reward history for a specified stake address
+
+```
+cexplorer=# select reward.epoch_no, pool_hash.view as delegated_pool, reward.amount as lovelace
+              from reward inner join stake_address on reward.addr_id = stake_address.id
+              inner join pool_hash on reward.pool_id = pool_hash.id
+              where stake_address.view = 'stake1u8gsndukzghdukmqdsd7r7wd6kvamvjv2pzcgag8v6jd69qfqyl5h'
+              order by epoch_no asc ;
+ epoch_no |                      delegated_pool                      | lovelace
+----------+----------------------------------------------------------+----------
+      212 | pool1hwlghkwnjsjk8370qt3dvp23d7urwm36f95fmxcz3np2kghknj9 |  2953284
+      213 | pool1hwlghkwnjsjk8370qt3dvp23d7urwm36f95fmxcz3np2kghknj9 |  3333940
+      214 | pool1xxhs2zw5xa4g54d5p62j46nlqzwp8jklqvuv2agjlapwjx9qkg9 |  3005843
+      215 | pool1xxhs2zw5xa4g54d5p62j46nlqzwp8jklqvuv2agjlapwjx9qkg9 |  3552293
+      216 | pool1hwlghkwnjsjk8370qt3dvp23d7urwm36f95fmxcz3np2kghknj9 |  3130673
+      217 | pool15yyxtkhz64p7a8cnax9l7u82s9t9hdhyxsa3tdm977qhgpnsuhq | 34339994
+      218 | pool15yyxtkhz64p7a8cnax9l7u82s9t9hdhyxsa3tdm977qhgpnsuhq | 30384189
+      219 | pool15yyxtkhz64p7a8cnax9l7u82s9t9hdhyxsa3tdm977qhgpnsuhq | 27293239
+      220 | pool15yyxtkhz64p7a8cnax9l7u82s9t9hdhyxsa3tdm977qhgpnsuhq | 36947267
+      221 | pool15yyxtkhz64p7a8cnax9l7u82s9t9hdhyxsa3tdm977qhgpnsuhq | 27016952
+
+(10 rows)
+```
+
+
+---
 
 [Query.hs]: https://github.com/input-output-hk/cardano-db-sync/blob/master/cardano-db/src/Cardano/Db/Query.hs
